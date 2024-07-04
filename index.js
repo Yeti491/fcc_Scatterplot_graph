@@ -1,191 +1,124 @@
-const url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json';
-const baseTmp = 8.66;
-const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-];
+const movieData = 'https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/movie-data.json';
 
+document.addEventListener('DOMContentLoaded', function () {
+    // Fetch data
+    fetch(movieData).then(response => response.json()).then((movieData) => {
+      console.log(movieData);
 
-// Fetch data
-const obtainData = async () => {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        return data.monthlyVariance;
-    } catch (error) {
-        console.error('Error fetching data: ', error);
-    }
-};
+      // Create size
+      const width = 1000;
+      const height = 600;
 
-// create tooltip element
-const tooltip = d3.select('#tooltip');
-
-//showData
-const showData = async () => {
-    const dataset = await obtainData();
-    console.log(dataset)
-
-    // set chart dimentions
-    const margin = { top: 30, right: 30, bottom: 40, left: 60 };
-    const width = 1000 - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
-    const padding = 50;
-
-    // create SVG element
-    const svg = d3.select('.graph')
-                .append('svg')
-                .attr('width', width + margin.left + margin.right)
-                .attr('height', height + margin.top + margin.bottom)
-                .append('g')
-                .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // create scales
-    const xScale = d3.scaleLinear()
-                    .domain([d3.min(dataset, d => d.year), d3.max(dataset, d => d.year)])
-                    .range([padding, width]);
-
-    const yScale = d3.scaleBand()
-                    .domain(d3.range(1, 13))
-                    .range([padding, height])
-                    .paddingInner(0.05);
-
-    // create x and y axes
-    const xAxis = d3.axisBottom(xScale).tickFormat(d3.format('d'));
-    const yAxis = d3.axisLeft(yScale).tickFormat(d => {
-        const date = new Date(0);
-        date.setUTCMonth(d - 1);
-        return d3.timeFormat('%B')(date);
-    });
-
-    // add axes
-    svg.append('g')
-        .attr('id', 'x-axis')
-        .attr('transform', `translate(0, ${height})`)
-        .call(xAxis);
-
-    svg.append('g')
-        .attr('id', 'y-axis')
-        .attr('transform', `translate(${padding}, 0)`)
-        .call(yAxis);
-
-    // create temperature array
-    dataset.forEach((d) => {
-        d.temp = baseTmp + d.variance;
-    })
-
-    // create color scale
-    const colorScale = d3.scaleSequential(d3.interpolateRdBu)
-        .domain(d3.extent(dataset, d => d.variance));
-
-    // add cells
-    svg.selectAll('.cell')
-        .data(dataset)
-        .enter()
-        .append('rect')
-        .attr('class', 'cell')
-        .attr('x', d => xScale(d.year))
-        .attr('y', d => yScale(d.month))
-        .attr('data-month', d => d.month -1)
-        .attr('data-year', d => d.year)
-        .attr('data-temp', d => d.temp)
-        .attr('width', (width -2 * padding) / (d3.max(dataset, d => d.year) - d3.min(dataset, d => d.year)))
-        .attr('height', yScale.bandwidth())
-        .attr('fill', d => colorScale(d.variance))
-        .on('mouseover', showTooltip)
-        .on('mouseout', hideTooltip);
-
-    // show tooltip
-    function showTooltip(event, d) {
-        const [x, y] = d3.pointer(event, this);
-        const monthName = monthNames[d.month -1]
-        tooltip.style('display', 'block')
-                .style('opacity', .9)
-                .attr('data-year', d.year)
-                .html(`${d.year} - ${monthName}<br>${d.temp.toFixed(2)}<br>${d.variance}`)
-                .style('left', (x + 10) + 'px')
-                .style('top', (y + 10) + 'px')
-        d3.select(this).attr('fill', 'yellow')
-    };
-
-    // hide tooltip
-    function hideTooltip(event, d) {
-        const [x, y] = d3.pointer(event, this);
-        tooltip.style('display', 'none');
-        d3.select(this).attr('fill', d => colorScale(d.variance))
-    };
-
-    //add y-title
-    svg.append('text')
-        .attr('class', 'y-axis-label')
-        .attr('transform', 'rotate(-90)')
-        .attr('y', 0 - margin.left)
-        .attr('x', 0 - (height / 2))
-        .attr('dy', '1em')
-        .attr('text-anchor', 'middle')
-        .text('Months');
-
-    //add x-title
-    svg.append('text')
-        .attr('class', 'x-axis-label')
-        .attr('transform', 'rotate(0)')
-        .attr('y', height + margin.bottom - 20)
-        .attr('x', width / 2)
-        .attr('dy', '1em')
-        .attr('text-anchor', 'middle')
-        .text('Years');
-
-    // add legends
-    const numColors = 9;
-    const colorDomain = d3.range(numColors).map(i => i / (numColors -1));
-    const legendColors = colorDomain.map(colorScale);
-    console.log(legendColors);
-
-    const legendContainer = d3.select('#legend')
+      // Create SVG container
+      const svg = d3.select('.graph')
         .append('svg')
-        .attr('width', 1000)
-        .attr('height', 80);
+        .attr('width', width + 200)
+        .attr('height', height + 100)
+        .append('g')
+        .attr('transform', 'translate(0,0)');
 
-    const legendCellWidth = 600 / numColors;
+      // Create a color scale
+      const customColors = ['#AFEEEE', '#FFDAB9', '#40E0D0', '#D8BFD8', '#FFF5EE', '#EEE8AA', '#D3D3D3']
+      const color = d3.scaleOrdinal(customColors);
 
-    legendContainer.selectAll('.legend-cell')
-        .data(legendColors)
-        .enter()
-        .append('rect')
-        .attr('class', 'legend-cell')
-        .attr('x', (d, i) => i * legendCellWidth)
-        .attr('y', 0)
-        .attr('width', legendCellWidth)
-        .attr('height', 20)
-        .attr('fill', d => d);
+      // Give the data to this cluster layout:
+      const root = d3.hierarchy(movieData)
+            .sum(d => d.value);
+    
+      // Set position of each element of the hierarchy:
+      d3.treemap()
+        .size([width, height])
+        .padding(0.2)
+        (root);
 
-    legendContainer.selectAll('.legend-text')
-                .data(legendColors)
-                .enter()
-                .append('text')
-                .attr('class', 'legend-text')
-                .attr('x', (d, i) => i * legendCellWidth + legendCellWidth / 2)
-                .attr('y', 40)
-                .attr('text-anchor', 'middle')
-                .text((d, i) => {
-                    const minTemp = d3.min(dataset, d => d.variance + baseTmp)
-                    const maxTemp = d3.max(dataset, d => d.variance + baseTmp)
-                    const step = (maxTemp - minTemp) / (numColors - 1);
-                    const value = minTemp + i * step;
-                    return value.toFixed(2) + '°C';
-                });       
-};
+      // Create tooltip
+      const tooltip = d3.select('#tooltip');
 
-showData();
+      // Add rectanegls:
+      svg.selectAll('rect')
+          .data(root.leaves())
+          .enter()
+          .append('rect')
+          .attr('class', 'tile')
+          .attr('data-name', d => d.data.name)
+          .attr('data-category', d => d.data.category)
+          .attr('data-value', d => d.data.value)
+          .attr('x', d => d.x0)
+          .attr('y', d => d.y0)
+          .attr('width', d => d.x1 - d.x0)
+          .attr('height', d => d.y1 - d.y0)
+          .style('stroke', 'lightgrey')
+          .style('fill', d => color(d.parent.data.name))
+          .on('mouseover', function(event, d) {
+            tooltip.style('visibility', 'visible')
+              .attr('data-value', d.value)
+              .html(`Title: ${d.data.name}<br>Sales: $${d.value.toLocaleString()}`);
+          })
+          .on('mousemove', function(event) {
+            const [x, y] = d3.pointer(event);
+            tooltip.style('top', (y - 10) + 'px')
+              .style('left', (x + 10) + 'px')
+          })
+          .on('mouseout', function() {
+            tooltip.style('visibility', 'hidden');
+          });
+
+        // Add text labels:
+        svg
+          .selectAll("text")
+          .data(root.leaves())
+          .enter()
+          .append("text")
+          .attr("x", d => d.x0 + 5) // +5 to adjust position (more right)
+          .attr("y", d => d.y0 + 20) // +20 to adjust position (lower)
+          .text(d => {
+            let text = d.data.name;
+            const rectWidth = d.x1 - d.x0;
+            const textLength = text.length;
+            const charWidth = 7;
+            const maxChars = Math.floor(rectWidth / charWidth);
+            if (textLength > maxChars) {
+              text = text.substring(0, maxChars - 3) + '...';
+            }
+            return text;
+          })
+          .attr("font-size", "12px")
+          .attr("fill", "black");
+
+        // Add legend
+        const categories = movieData.children.map(d => d.name);
+
+        const legend = svg.append('g')
+          .attr('class', 'legend')
+          .attr('id', 'legend')
+          .attr('transform', `translate(${width + 20}, 20)`);
+
+        legend.selectAll('rect')
+          .data(categories)
+          .enter()
+          .append('rect')
+          .attr('class', 'legend-item')
+          .attr('x', 0)
+          .attr('y', (d, i) => i * 20)
+          .attr('width', 18)
+          .attr('height', 18)
+          .style('fill', d => color(d));
+
+        legend.selectAll('text')
+          .data(categories)
+          .enter()
+          .append('text')
+          .attr('x', 24)
+          .attr('y', (d, i) => i * 20 + 9)
+          .attr('dy', '.35em')
+          .attr('font-size', '14px')
+          .text(d => d);
+
+
+      }).catch(error => {
+        console.error('Error:', error);
+      })
+
+    
+});
+
